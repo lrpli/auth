@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mini-IdP Admin</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --bg: #0b0d11;
+  --surface: #14161d;
+  --surface2: #1a1d27;
+  --border: rgba(255,255,255,0.06);
+  --text: #e4e4e7;
+  --text2: #a1a1aa;
+  --text3: #52525b;
+  --accent: #6366f1;
+  --accent2: #818cf8;
+  --green: #10b981;
+  --red: #ef4444;
+  --amber: #f59e0b;
+  --radius: 12px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* Layout */
+.layout { display: flex; min-height: 100vh; }
+.sidebar {
+  width: 240px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  padding: 24px 0;
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  z-index: 10;
+}
+.main { margin-left: 240px; flex: 1; padding: 32px 40px; max-width: 1200px; }
+
+/* Sidebar */
+.brand {
+  padding: 0 24px 28px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+.brand h2 {
+  font-size: 18px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #6366f1, #10b981);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.brand small { color: var(--text3); font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 24px;
+  color: var(--text2);
+  font-size: 14px; font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-left: 3px solid transparent;
+}
+.nav-item:hover { color: var(--text); background: rgba(255,255,255,0.02); }
+.nav-item.active {
+  color: var(--accent2);
+  background: rgba(99,102,241,0.06);
+  border-left-color: var(--accent);
+}
+.nav-item svg { width: 18px; height: 18px; opacity: 0.7; }
+.sidebar-footer {
+  margin-top: auto;
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+}
+.sidebar-footer a {
+  color: var(--text3); text-decoration: none; font-size: 13px;
+  display: flex; align-items: center; gap: 6px;
+}
+.sidebar-footer a:hover { color: var(--red); }
+
+/* Page sections */
+.page { display: none; }
+.page.active { display: block; }
+.page-title { font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+.page-desc { color: var(--text2); font-size: 14px; margin-bottom: 28px; }
+
+/* Cards */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+}
+.stat-card .label { font-size: 12px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; }
+.stat-card .value { font-size: 28px; font-weight: 700; }
+.stat-card .value.accent { color: var(--accent2); }
+.stat-card .value.green { color: var(--green); }
+.stat-card .value.amber { color: var(--amber); }
+
+/* Tables */
+.table-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.table-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.table-header h3 { font-size: 15px; font-weight: 600; }
+table { width: 100%; border-collapse: collapse; }
+th {
+  text-align: left; padding: 10px 20px;
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--text3); font-weight: 600;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255,255,255,0.01);
+}
+td {
+  padding: 12px 20px;
+  font-size: 14px;
+  border-bottom: 1px solid var(--border);
+}
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: rgba(255,255,255,0.015); }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px; font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: #4f46e5; transform: translateY(-1px); }
+.btn-sm { padding: 5px 10px; font-size: 12px; border-radius: 6px; }
+.btn-ghost { background: transparent; color: var(--text2); border: 1px solid var(--border); }
+.btn-ghost:hover { border-color: var(--text3); color: var(--text); }
+.btn-danger { background: rgba(239,68,68,0.1); color: var(--red); }
+.btn-danger:hover { background: rgba(239,68,68,0.2); }
+.btn-green { background: rgba(16,185,129,0.1); color: var(--green); }
+.btn-green:hover { background: rgba(16,185,129,0.2); }
+
+/* Badges */
+.badge {
+  display: inline-block; padding: 3px 10px;
+  border-radius: 20px; font-size: 11px; font-weight: 600;
+}
+.badge-green { background: rgba(16,185,129,0.12); color: #34d399; }
+.badge-red { background: rgba(239,68,68,0.12); color: #fca5a5; }
+.badge-blue { background: rgba(99,102,241,0.12); color: #a5b4fc; }
+.badge-amber { background: rgba(245,158,11,0.12); color: #fcd34d; }
+
+/* Modal */
+.modal-overlay {
+  display: none;
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+  align-items: center; justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 32px;
+  width: 100%; max-width: 520px;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+}
+.modal h3 { font-size: 18px; font-weight: 700; margin-bottom: 24px; }
+.form-group { margin-bottom: 18px; }
+.form-group label {
+  display: block; font-size: 13px; font-weight: 500;
+  color: var(--text2); margin-bottom: 6px;
+}
+.form-group input, .form-group select {
+  width: 100%;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 14px;
+  color: var(--text);
+  font-family: inherit;
+  outline: none;
+}
+.form-group input:focus, .form-group select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+}
+.form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 28px; }
+
+/* Config block */
+.config-block {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin-bottom: 20px;
+}
+.config-block h3 { font-size: 15px; font-weight: 600; margin-bottom: 16px; }
+.config-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+.config-row:last-child { border-bottom: none; }
+.config-row .label { color: var(--text2); font-size: 13px; }
+.config-row .value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--green);
+  word-break: break-all;
+  text-align: right;
+  max-width: 60%;
+}
+.copy-btn {
+  background: none; border: none; color: var(--text3);
+  cursor: pointer; padding: 2px 6px; font-size: 14px;
+  border-radius: 4px;
+}
+.copy-btn:hover { color: var(--accent2); background: rgba(255,255,255,0.05); }
+
+/* Quick add buttons */
+.quick-add { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .sidebar { display: none; }
+  .main { margin-left: 0; padding: 20px; }
+}
+</style>
+</head>
+<body>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">
+      <h2>Mini-IdP</h2>
+      <small>Identity Provider</small>
+    </div>
+    <div class="nav-item active" data-page="dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </div>
+    <div class="nav-item" data-page="users">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+      Users
+    </div>
+    <div class="nav-item" data-page="sps">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      Service Providers
+    </div>
+    <div class="nav-item" data-page="config">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      SAML Config
+    </div>
+    <div class="nav-item" data-page="logs">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Login Logs
+    </div>
+    <div class="sidebar-footer">
+      <a href="/admin/logout">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Logout
+      </a>
+    </div>
+  </aside>
+
+  <div class="main">
+    <!-- Dashboard -->
+    <div class="page active" id="page-dashboard">
+      <h1 class="page-title">Dashboard</h1>
+      <p class="page-desc">Overview of your identity provider</p>
+      <div class="stats">
+        <div class="stat-card"><div class="label">Total Users</div><div class="value accent" id="stat-users">-</div></div>
+        <div class="stat-card"><div class="label">Service Providers</div><div class="value green" id="stat-sps">-</div></div>
+        <div class="stat-card"><div class="label">Logins Today</div><div class="value amber" id="stat-logins">-</div></div>
+        <div class="stat-card"><div class="label">Success Rate</div><div class="value green" id="stat-success">-</div></div>
+      </div>
+      <div class="config-block">
+        <h3>Quick Links</h3>
+        <div class="config-row">
+          <span class="label">SAML Metadata URL</span>
+          <span class="value" id="dash-metadata"></span>
+          <button class="copy-btn" onclick="copyText(document.getElementById('dash-metadata').textContent)" title="Copy">📋</button>
+        </div>
+        <div class="config-row">
+          <span class="label">SSO Login URL</span>
+          <span class="value" id="dash-sso"></span>
+          <button class="copy-btn" onclick="copyText(document.getElementById('dash-sso').textContent)" title="Copy">📋</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Users -->
+    <div class="page" id="page-users">
+      <h1 class="page-title">Users</h1>
+      <p class="page-desc">Manage SSO user accounts</p>
+      <div class="table-wrap">
+        <div class="table-header">
+          <h3>All Users</h3>
+          <button class="btn btn-primary" onclick="openUserModal()">+ Add User</button>
+        </div>
+        <table>
+          <thead><tr><th>Email</th><th>Name</th><th>ImmutableID</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="users-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Service Providers -->
+    <div class="page" id="page-sps">
+      <h1 class="page-title">Service Providers</h1>
+      <p class="page-desc">Configure SAML service providers (Google, Microsoft, etc.)</p>
+      <div class="quick-add">
+        <button class="btn btn-green" onclick="quickAddSP('google')">⚡ Quick Add Google Workspace</button>
+        <button class="btn btn-green" onclick="quickAddSP('microsoft')">⚡ Quick Add Microsoft 365</button>
+      </div>
+      <div class="table-wrap">
+        <div class="table-header">
+          <h3>All Service Providers</h3>
+          <button class="btn btn-primary" onclick="openSPModal()">+ Add SP</button>
+        </div>
+        <table>
+          <thead><tr><th>Name</th><th>Type</th><th>Entity ID</th><th>ACS URL</th><th>NameID</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody id="sps-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SAML Config -->
+    <div class="page" id="page-config">
+      <h1 class="page-title">SAML Configuration</h1>
+      <p class="page-desc">Certificate and endpoint information for configuring your SPs</p>
+      <div class="config-block">
+        <h3>IdP Endpoints</h3>
+        <div class="config-row">
+          <span class="label">Metadata URL</span>
+          <span class="value" id="cfg-metadata"></span>
+          <button class="copy-btn" onclick="copyText(document.getElementById('cfg-metadata').textContent)">📋</button>
+        </div>
+        <div class="config-row">
+          <span class="label">SSO URL (Sign-in page)</span>
+          <span class="value" id="cfg-sso"></span>
+          <button class="copy-btn" onclick="copyText(document.getElementById('cfg-sso').textContent)">📋</button>
+        </div>
+        <div class="config-row">
+          <span class="label">SLO URL (Sign-out)</span>
+          <span class="value" id="cfg-slo"></span>
+          <button class="copy-btn" onclick="copyText(document.getElementById('cfg-slo').textContent)">📋</button>
+        </div>
+        <div class="config-row">
+          <span class="label">Certificate Download</span>
+          <span><a class="btn btn-sm btn-ghost" id="cfg-cert-dl" href="#" download>Download PEM</a></span>
+        </div>
+      </div>
+      <div class="config-block">
+        <h3>Signing Certificate (Base64)</h3>
+        <p style="font-size:12px;color:var(--text3);margin-bottom:12px">Copy this into Google Admin Console or Microsoft PowerShell</p>
+        <div style="background:var(--bg);padding:14px;border-radius:8px;position:relative;">
+          <pre id="cfg-cert" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--green);word-break:break-all;white-space:pre-wrap;max-height:200px;overflow-y:auto;"></pre>
+          <button class="copy-btn" style="position:absolute;top:8px;right:8px;" onclick="copyText(document.getElementById('cfg-cert').textContent)">📋</button>
+        </div>
+      </div>
+      <div class="config-block">
+        <h3>Google Workspace Setup Guide</h3>
+        <div style="font-size:14px;color:var(--text2);line-height:1.7;">
+          1. Go to <strong>admin.google.com</strong> → Security → Authentication → SSO with third-party IdP<br>
+          2. Check <strong>"Set up SSO with third-party identity provider"</strong><br>
+          3. Set <strong>Sign-in page URL</strong> to the SSO URL above<br>
+          4. Set <strong>Sign-out page URL</strong> to the SLO URL above<br>
+          5. Upload the <strong>certificate PEM</strong> file<br>
+          6. Save — and make sure user emails match in both systems
+        </div>
+      </div>
+      <div class="config-block">
+        <h3>Microsoft 365 Setup Guide</h3>
+        <div style="font-size:14px;color:var(--text2);line-height:1.7;">
+          1. Use PowerShell to set the domain as Federated<br>
+          2. Set <strong>IssuerUri</strong> to your IdP Entity ID (https://your-domain)<br>
+          3. Set <strong>PassiveLogOnUri</strong> to the SSO URL above<br>
+          4. Set <strong>SigningCertificate</strong> to the Base64 certificate above<br>
+          5. Ensure each user's <strong>ImmutableID</strong> matches in both systems
+        </div>
+      </div>
+    </div>
+
+    <!-- Logs -->
+    <div class="page" id="page-logs">
+      <h1 class="page-title">Login Logs</h1>
+      <p class="page-desc">Recent authentication attempts</p>
+      <div class="table-wrap">
+        <div class="table-header">
+          <h3>Recent Logins</h3>
+          <button class="btn btn-ghost btn-sm" onclick="loadLogs()">Refresh</button>
+        </div>
+        <table>
+          <thead><tr><th>Time</th><th>Email</th><th>Service Provider</th><th>Status</th><th>IP</th></tr></thead>
+          <tbody id="logs-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- User Modal -->
+<div class="modal-overlay" id="user-modal">
+  <div class="modal">
+    <h3 id="user-modal-title">Add User</h3>
+    <input type="hidden" id="user-edit-id">
+    <div class="form-group"><label>Email *</label><input type="email" id="user-email" placeholder="user@acrio.org"></div>
+    <div class="form-group"><label>Password *</label><input type="password" id="user-password" placeholder="Leave blank to keep current (edit mode)"></div>
+    <div class="form-group"><label>First Name</label><input type="text" id="user-fname" placeholder="San"></div>
+    <div class="form-group"><label>Last Name</label><input type="text" id="user-lname" placeholder="Zhang"></div>
+    <div class="form-group"><label>Display Name</label><input type="text" id="user-display" placeholder="Zhang San"></div>
+    <div class="form-group"><label>Immutable ID (for Microsoft 365)</label><input type="text" id="user-iid" placeholder="Usually same as email"></div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('user-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveUser()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- SP Modal -->
+<div class="modal-overlay" id="sp-modal">
+  <div class="modal">
+    <h3 id="sp-modal-title">Add Service Provider</h3>
+    <input type="hidden" id="sp-edit-id">
+    <div class="form-group"><label>Name *</label><input type="text" id="sp-name" placeholder="Google Workspace"></div>
+    <div class="form-group">
+      <label>Type</label>
+      <select id="sp-type"><option value="google">Google Workspace</option><option value="microsoft">Microsoft 365</option><option value="custom">Custom</option></select>
+    </div>
+    <div class="form-group"><label>Entity ID *</label><input type="text" id="sp-entity" placeholder="google.com"></div>
+    <div class="form-group"><label>ACS URL *</label><input type="text" id="sp-acs" placeholder="https://www.google.com/a/yourdomain.com/acs"></div>
+    <div class="form-group">
+      <label>Name ID Format</label>
+      <select id="sp-nameid"><option value="email">Email Address</option><option value="persistent">Persistent (ImmutableID)</option></select>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('sp-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSP()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Navigation
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    item.classList.add('active');
+    const page = item.dataset.page;
+    document.getElementById('page-' + page).classList.add('active');
+    if (page === 'dashboard') loadDashboard();
+    if (page === 'users') loadUsers();
+    if (page === 'sps') loadSPs();
+    if (page === 'config') loadConfig();
+    if (page === 'logs') loadLogs();
+  });
+});
+
+// API helper
+async function api(url, opts = {}) {
+  const res = await fetch(url, {
+    headers: { 'Content-Type': 'application/json', ...opts.headers },
+    ...opts,
+    body: opts.body ? JSON.stringify(opts.body) : undefined
+  });
+  return res.json();
+}
+
+// Dashboard
+async function loadDashboard() {
+  const stats = await api('/api/stats');
+  document.getElementById('stat-users').textContent = stats.users;
+  document.getElementById('stat-sps').textContent = stats.sps;
+  document.getElementById('stat-logins').textContent = stats.loginsToday;
+  const rate = stats.loginsToday > 0 ? Math.round(stats.successToday / stats.loginsToday * 100) + '%' : '—';
+  document.getElementById('stat-success').textContent = rate;
+  const cert = await api('/api/cert-info');
+  if (cert.exists) {
+    document.getElementById('dash-metadata').textContent = cert.metadataUrl;
+    document.getElementById('dash-sso').textContent = cert.ssoUrl;
+  }
+}
+
+// Users
+async function loadUsers() {
+  const users = await api('/api/users');
+  const tbody = document.getElementById('users-tbody');
+  tbody.innerHTML = users.map(u => `<tr>
+    <td>${esc(u.email)}</td>
+    <td>${esc(u.first_name || '')} ${esc(u.last_name || '')}</td>
+    <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text3)">${esc(u.immutable_id || '—')}</td>
+    <td>${u.enabled ? '<span class="badge badge-green">Active</span>' : '<span class="badge badge-red">Disabled</span>'}</td>
+    <td>
+      <button class="btn btn-sm btn-ghost" onclick='editUser(${JSON.stringify(u)})'>Edit</button>
+      <button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id})">Delete</button>
+    </td>
+  </tr>`).join('');
+}
+
+function openUserModal() {
+  document.getElementById('user-modal-title').textContent = 'Add User';
+  document.getElementById('user-edit-id').value = '';
+  document.getElementById('user-email').value = '';
+  document.getElementById('user-password').value = '';
+  document.getElementById('user-fname').value = '';
+  document.getElementById('user-lname').value = '';
+  document.getElementById('user-display').value = '';
+  document.getElementById('user-iid').value = '';
+  document.getElementById('user-modal').classList.add('open');
+}
+
+function editUser(u) {
+  document.getElementById('user-modal-title').textContent = 'Edit User';
+  document.getElementById('user-edit-id').value = u.id;
+  document.getElementById('user-email').value = u.email;
+  document.getElementById('user-password').value = '';
+  document.getElementById('user-fname').value = u.first_name || '';
+  document.getElementById('user-lname').value = u.last_name || '';
+  document.getElementById('user-display').value = u.display_name || '';
+  document.getElementById('user-iid').value = u.immutable_id || '';
+  document.getElementById('user-modal').classList.add('open');
+}
+
+async function saveUser() {
+  const id = document.getElementById('user-edit-id').value;
+  const data = {
+    email: document.getElementById('user-email').value,
+    password: document.getElementById('user-password').value,
+    first_name: document.getElementById('user-fname').value,
+    last_name: document.getElementById('user-lname').value,
+    display_name: document.getElementById('user-display').value,
+    immutable_id: document.getElementById('user-iid').value,
+    enabled: true
+  };
+  if (!data.email) return alert('Email is required');
+  if (!id && !data.password) return alert('Password is required for new users');
+
+  if (id) {
+    await api('/api/users/' + id, { method: 'PUT', body: data });
+  } else {
+    await api('/api/users', { method: 'POST', body: data });
+  }
+  closeModal('user-modal');
+  loadUsers();
+}
+
+async function deleteUser(id) {
+  if (!confirm('Delete this user?')) return;
+  await api('/api/users/' + id, { method: 'DELETE' });
+  loadUsers();
+}
+
+// Service Providers
+async function loadSPs() {
+  const sps = await api('/api/sps');
+  const tbody = document.getElementById('sps-tbody');
+  const typeColors = { google: 'badge-blue', microsoft: 'badge-amber', custom: 'badge-green' };
+  tbody.innerHTML = sps.map(sp => `<tr>
+    <td><strong>${esc(sp.name)}</strong></td>
+    <td><span class="badge ${typeColors[sp.type] || 'badge-green'}">${esc(sp.type)}</span></td>
+    <td style="font-size:12px;font-family:'JetBrains Mono',monospace">${esc(sp.entity_id)}</td>
+    <td style="font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis" title="${esc(sp.acs_url)}">${esc(sp.acs_url)}</td>
+    <td>${esc(sp.name_id_format)}</td>
+    <td>${sp.enabled ? '<span class="badge badge-green">Active</span>' : '<span class="badge badge-red">Disabled</span>'}</td>
+    <td>
+      <button class="btn btn-sm btn-ghost" onclick='editSP(${JSON.stringify(sp)})'>Edit</button>
+      <button class="btn btn-sm btn-danger" onclick="deleteSP(${sp.id})">Delete</button>
+    </td>
+  </tr>`).join('');
+}
+
+async function quickAddSP(type) {
+  const domain = prompt('Enter your email domain (e.g. acrio.org):');
+  if (!domain) return;
+  const res = await api('/api/sps/template/' + type, { method: 'POST', body: { domain } });
+  if (res.success) {
+    alert(`${type === 'google' ? 'Google Workspace' : 'Microsoft 365'} SP added!`);
+    loadSPs();
+  } else {
+    alert('Error: ' + res.error);
+  }
+}
+
+function openSPModal() {
+  document.getElementById('sp-modal-title').textContent = 'Add Service Provider';
+  document.getElementById('sp-edit-id').value = '';
+  document.getElementById('sp-name').value = '';
+  document.getElementById('sp-type').value = 'google';
+  document.getElementById('sp-entity').value = '';
+  document.getElementById('sp-acs').value = '';
+  document.getElementById('sp-nameid').value = 'email';
+  document.getElementById('sp-modal').classList.add('open');
+}
+
+function editSP(sp) {
+  document.getElementById('sp-modal-title').textContent = 'Edit Service Provider';
+  document.getElementById('sp-edit-id').value = sp.id;
+  document.getElementById('sp-name').value = sp.name;
+  document.getElementById('sp-type').value = sp.type;
+  document.getElementById('sp-entity').value = sp.entity_id;
+  document.getElementById('sp-acs').value = sp.acs_url;
+  document.getElementById('sp-nameid').value = sp.name_id_format;
+  document.getElementById('sp-modal').classList.add('open');
+}
+
+async function saveSP() {
+  const id = document.getElementById('sp-edit-id').value;
+  const data = {
+    name: document.getElementById('sp-name').value,
+    type: document.getElementById('sp-type').value,
+    entity_id: document.getElementById('sp-entity').value,
+    acs_url: document.getElementById('sp-acs').value,
+    name_id_format: document.getElementById('sp-nameid').value,
+    enabled: true
+  };
+  if (!data.name || !data.entity_id || !data.acs_url) return alert('Name, Entity ID, and ACS URL are required');
+
+  if (id) {
+    await api('/api/sps/' + id, { method: 'PUT', body: data });
+  } else {
+    await api('/api/sps', { method: 'POST', body: data });
+  }
+  closeModal('sp-modal');
+  loadSPs();
+}
+
+async function deleteSP(id) {
+  if (!confirm('Delete this service provider?')) return;
+  await api('/api/sps/' + id, { method: 'DELETE' });
+  loadSPs();
+}
+
+// Config
+async function loadConfig() {
+  const cert = await api('/api/cert-info');
+  if (cert.exists) {
+    document.getElementById('cfg-metadata').textContent = cert.metadataUrl;
+    document.getElementById('cfg-sso').textContent = cert.ssoUrl;
+    document.getElementById('cfg-slo').textContent = cert.sloUrl;
+    document.getElementById('cfg-cert-dl').href = cert.certDownloadUrl;
+    document.getElementById('cfg-cert').textContent = cert.base64;
+  }
+}
+
+// Logs
+async function loadLogs() {
+  const logs = await api('/api/logs');
+  const tbody = document.getElementById('logs-tbody');
+  tbody.innerHTML = logs.map(l => `<tr>
+    <td style="font-size:12px;color:var(--text3)">${new Date(l.created_at + 'Z').toLocaleString()}</td>
+    <td>${esc(l.user_email || '—')}</td>
+    <td>${esc(l.sp_name || '—')}</td>
+    <td>${l.success ? '<span class="badge badge-green">Success</span>' : '<span class="badge badge-red">Failed</span>'}</td>
+    <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text3)">${esc(l.ip_address || '')}</td>
+  </tr>`).join('');
+}
+
+// Utils
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function copyText(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    // Quick flash effect
+  }).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta);
+  });
+}
+
+// Close modals on backdrop click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) overlay.classList.remove('open');
+  });
+});
+
+// Init
+loadDashboard();
+</script>
+</body>
+</html>
