@@ -5,6 +5,7 @@ const path = require('path');
 const fs = require('fs');
 const { adminOps, userOps, spOps, logOps } = require('./lib/db');
 const samlLib = require('./lib/saml');
+const totpLib = require('./lib/totp');
 
 // Load .env manually (no dotenv dependency)
 const envPath = path.join(__dirname, '.env');
@@ -26,6 +27,9 @@ const LOGIN_LOCK_THRESHOLD = parseInt(process.env.LOGIN_LOCK_THRESHOLD || '10', 
 const LOGIN_LOCK_MS = parseInt(process.env.LOGIN_LOCK_MS || String(15 * 60 * 1000), 10);
 const LOGIN_ATTEMPT_TTL_MS = parseInt(process.env.LOGIN_ATTEMPT_TTL_MS || String(24 * 60 * 60 * 1000), 10);
 const CAPTCHA_TTL_MS = parseInt(process.env.CAPTCHA_TTL_MS || String(5 * 60 * 1000), 10);
+const TOTP_ISSUER = process.env.TOTP_ISSUER || 'Mini-IdP';
+const TOTP_WINDOW = parseInt(process.env.TOTP_WINDOW || '1', 10);
+const TOTP_SETUP_TTL_MS = parseInt(process.env.TOTP_SETUP_TTL_MS || String(10 * 60 * 1000), 10);
 
 const app = express();
 const loginAttemptStore = new Map();
@@ -175,6 +179,31 @@ function redirectWithAuthError(res, pathName, { error, captcha, retryMs } = {}) 
   if (retryMs && retryMs > 0) params.set('retry', String(Math.ceil(retryMs / 1000)));
   const query = params.toString();
   res.redirect(query ? `${pathName}?${query}` : pathName);
+}
+
+function isAdminTotpEnabled(admin) {
+  return !!admin && Number(admin.totp_enabled) === 1 && !!admin.totp_secret;
+}
+
+function verifyAdminTotp(admin, token) {
+  if (!isAdminTotpEnabled(admin)) return true;
+  return totpLib.verifyTotp(admin.totp_secret, token, { window: TOTP_WINDOW });
+}
+
+function getAdminTotpAccount(admin) {
+  return `${admin.username}@${HOSTNAME}`;
+}
+
+function getPendingAdminTotpSetup(req) {
+  const setup = req.session.admin2faSetup;
+  if (!setup) return null;
+
+  if (Date.now() - setup.createdAt > TOTP_SETUP_TTL_MS) {
+    delete req.session.admin2faSetup;
+    return null;
+  }
+
+  return setup;
 }
 
 // ============================================================
@@ -407,6 +436,7 @@ app.get('/admin/login', (req, res) => {
 app.post('/admin/login', (req, res) => {
   const username = String(req.body.username || '').trim();
   const password = String(req.body.password || '');
+  const otpCode = String(req.body.otp_code || '').trim();
   const captchaAnswer = req.body.captcha_answer;
   const attemptKey = buildLoginAttemptKey('admin', req, username);
   const lockRemainingMs = getLockRemainingMs(attemptKey);
@@ -435,6 +465,16 @@ app.post('/admin/login', (req, res) => {
     const retryMs = Math.max(0, state.lockUntil - Date.now());
     return redirectWithAuthError(res, '/admin/login', {
       error: retryMs > 0 ? 'locked' : 'invalid',
+      captcha: state.failedCount >= LOGIN_CAPTCHA_THRESHOLD,
+      retryMs
+    });
+  }
+
+  if (isAdminTotpEnabled(admin) && !verifyAdminTotp(admin, otpCode)) {
+    const state = registerFailedAttempt(attemptKey);
+    const retryMs = Math.max(0, state.lockUntil - Date.now());
+    return redirectWithAuthError(res, '/admin/login', {
+      error: retryMs > 0 ? 'locked' : (otpCode ? 'totp_invalid' : 'totp_required'),
       captcha: state.failedCount >= LOGIN_CAPTCHA_THRESHOLD,
       retryMs
     });
@@ -589,6 +629,82 @@ app.post('/api/admin/password', requireAdmin, (req, res) => {
     return res.status(400).json({ error: 'Password must be at least 6 characters' });
   }
   adminOps.changePassword(req.session.admin.id, newPassword);
+  res.json({ success: true });
+});
+
+// Admin 2FA status
+app.get('/api/admin/2fa', requireAdmin, (req, res) => {
+  const admin = adminOps.getSecurity(req.session.admin.id);
+  if (!admin) return res.status(404).json({ error: 'Admin not found' });
+
+  res.json({
+    enabled: isAdminTotpEnabled(admin),
+    issuer: TOTP_ISSUER,
+    account: getAdminTotpAccount(admin),
+    hasPendingSetup: !!getPendingAdminTotpSetup(req)
+  });
+});
+
+// Start 2FA setup (generate secret, keep pending in session)
+app.post('/api/admin/2fa/setup', requireAdmin, (req, res) => {
+  const admin = adminOps.getSecurity(req.session.admin.id);
+  if (!admin) return res.status(404).json({ error: 'Admin not found' });
+  if (isAdminTotpEnabled(admin)) return res.status(400).json({ error: '2FA already enabled' });
+
+  const secret = totpLib.generateSecret();
+  const account = getAdminTotpAccount(admin);
+  const otpauthUrl = totpLib.buildOtpAuthUrl({
+    issuer: TOTP_ISSUER,
+    accountName: account,
+    secret
+  });
+
+  req.session.admin2faSetup = {
+    secret,
+    account,
+    createdAt: Date.now()
+  };
+
+  res.json({
+    success: true,
+    secret,
+    account,
+    issuer: TOTP_ISSUER,
+    otpauthUrl
+  });
+});
+
+// Confirm setup and enable 2FA
+app.post('/api/admin/2fa/enable', requireAdmin, (req, res) => {
+  const token = String(req.body.token || '').trim();
+  const setup = getPendingAdminTotpSetup(req);
+
+  if (!setup) {
+    return res.status(400).json({ error: 'No active 2FA setup. Please start again.' });
+  }
+
+  if (!totpLib.verifyTotp(setup.secret, token, { window: TOTP_WINDOW })) {
+    return res.status(400).json({ error: 'Invalid verification code' });
+  }
+
+  adminOps.enableTotp(req.session.admin.id, setup.secret);
+  delete req.session.admin2faSetup;
+  res.json({ success: true });
+});
+
+// Disable 2FA (requires a valid current code)
+app.post('/api/admin/2fa/disable', requireAdmin, (req, res) => {
+  const token = String(req.body.token || '').trim();
+  const admin = adminOps.getSecurity(req.session.admin.id);
+  if (!admin) return res.status(404).json({ error: 'Admin not found' });
+  if (!isAdminTotpEnabled(admin)) return res.status(400).json({ error: '2FA is not enabled' });
+
+  if (!totpLib.verifyTotp(admin.totp_secret, token, { window: TOTP_WINDOW })) {
+    return res.status(400).json({ error: 'Invalid verification code' });
+  }
+
+  adminOps.disableTotp(req.session.admin.id);
+  delete req.session.admin2faSetup;
   res.json({ success: true });
 });
 

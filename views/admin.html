@@ -8,24 +8,27 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
-  --bg: #0b0d11;
-  --surface: #14161d;
-  --surface2: #1a1d27;
-  --border: rgba(255,255,255,0.06);
-  --text: #e4e4e7;
-  --text2: #a1a1aa;
-  --text3: #52525b;
-  --accent: #6366f1;
-  --accent2: #818cf8;
-  --green: #10b981;
-  --red: #ef4444;
-  --amber: #f59e0b;
+  --bg: #ecfbff;
+  --surface: #ffffff;
+  --surface2: #f4fcff;
+  --border: rgba(15,23,42,0.12);
+  --text: #0f172a;
+  --text2: #334155;
+  --text3: #64748b;
+  --accent: #0ea5e9;
+  --accent2: #0284c7;
+  --green: #059669;
+  --red: #dc2626;
+  --amber: #d97706;
   --radius: 12px;
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body {
   font-family: 'DM Sans', sans-serif;
-  background: var(--bg);
+  background:
+    radial-gradient(1100px 540px at 12% -16%, rgba(14,165,233,0.24), transparent 55%),
+    radial-gradient(960px 520px at 100% 0%, rgba(6,182,212,0.16), transparent 52%),
+    var(--bg);
   color: var(--text);
   min-height: 100vh;
 }
@@ -34,7 +37,7 @@ body {
 .layout { display: flex; min-height: 100vh; }
 .sidebar {
   width: 240px;
-  background: var(--surface);
+  background: var(--surface2);
   border-right: 1px solid var(--border);
   padding: 24px 0;
   display: flex;
@@ -54,7 +57,7 @@ body {
 .brand h2 {
   font-size: 18px;
   font-weight: 700;
-  background: linear-gradient(135deg, #6366f1, #10b981);
+  background: linear-gradient(135deg, #0284c7, #06b6d4);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -68,10 +71,10 @@ body {
   transition: all 0.15s;
   border-left: 3px solid transparent;
 }
-.nav-item:hover { color: var(--text); background: rgba(255,255,255,0.02); }
+.nav-item:hover { color: var(--text); background: rgba(14,165,233,0.1); }
 .nav-item.active {
   color: var(--accent2);
-  background: rgba(99,102,241,0.06);
+  background: rgba(14,165,233,0.15);
   border-left-color: var(--accent);
 }
 .nav-item svg { width: 18px; height: 18px; opacity: 0.7; }
@@ -125,7 +128,7 @@ th {
   font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
   color: var(--text3); font-weight: 600;
   border-bottom: 1px solid var(--border);
-  background: rgba(255,255,255,0.01);
+  background: rgba(14,165,233,0.08);
 }
 td {
   padding: 12px 20px;
@@ -133,7 +136,7 @@ td {
   border-bottom: 1px solid var(--border);
 }
 tr:last-child td { border-bottom: none; }
-tr:hover td { background: rgba(255,255,255,0.015); }
+tr:hover td { background: rgba(148,163,184,0.14); }
 
 /* Buttons */
 .btn {
@@ -147,30 +150,30 @@ tr:hover td { background: rgba(255,255,255,0.015); }
   transition: all 0.15s;
 }
 .btn-primary { background: var(--accent); color: #fff; }
-.btn-primary:hover { background: #4f46e5; transform: translateY(-1px); }
+.btn-primary:hover { background: #0284c7; transform: translateY(-1px); }
 .btn-sm { padding: 5px 10px; font-size: 12px; border-radius: 6px; }
 .btn-ghost { background: transparent; color: var(--text2); border: 1px solid var(--border); }
-.btn-ghost:hover { border-color: var(--text3); color: var(--text); }
-.btn-danger { background: rgba(239,68,68,0.1); color: var(--red); }
-.btn-danger:hover { background: rgba(239,68,68,0.2); }
-.btn-green { background: rgba(16,185,129,0.1); color: var(--green); }
-.btn-green:hover { background: rgba(16,185,129,0.2); }
+.btn-ghost:hover { border-color: var(--accent); color: var(--accent2); }
+.btn-danger { background: rgba(220,38,38,0.1); color: var(--red); }
+.btn-danger:hover { background: rgba(220,38,38,0.18); }
+.btn-green { background: rgba(5,150,105,0.12); color: var(--green); }
+.btn-green:hover { background: rgba(5,150,105,0.2); }
 
 /* Badges */
 .badge {
   display: inline-block; padding: 3px 10px;
   border-radius: 20px; font-size: 11px; font-weight: 600;
 }
-.badge-green { background: rgba(16,185,129,0.12); color: #34d399; }
-.badge-red { background: rgba(239,68,68,0.12); color: #fca5a5; }
-.badge-blue { background: rgba(99,102,241,0.12); color: #a5b4fc; }
-.badge-amber { background: rgba(245,158,11,0.12); color: #fcd34d; }
+.badge-green { background: rgba(5,150,105,0.14); color: #047857; }
+.badge-red { background: rgba(220,38,38,0.14); color: #b91c1c; }
+.badge-blue { background: rgba(14,165,233,0.14); color: #0369a1; }
+.badge-amber { background: rgba(217,119,6,0.16); color: #b45309; }
 
 /* Modal */
 .modal-overlay {
   display: none;
   position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.6);
+  background: rgba(15,23,42,0.35);
   backdrop-filter: blur(4px);
   z-index: 100;
   align-items: center; justify-content: center;
@@ -184,7 +187,7 @@ tr:hover td { background: rgba(255,255,255,0.015); }
   width: 100%; max-width: 520px;
   max-height: 85vh;
   overflow-y: auto;
-  box-shadow: 0 24px 80px rgba(0,0,0,0.5);
+  box-shadow: 0 20px 44px rgba(14,165,233,0.16);
 }
 .modal h3 { font-size: 18px; font-weight: 700; margin-bottom: 24px; }
 .form-group { margin-bottom: 18px; }
@@ -194,8 +197,8 @@ tr:hover td { background: rgba(255,255,255,0.015); }
 }
 .form-group input, .form-group select {
   width: 100%;
-  background: rgba(255,255,255,0.04);
-  border: 1px solid var(--border);
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
   border-radius: 8px;
   padding: 10px 14px;
   font-size: 14px;
@@ -205,7 +208,7 @@ tr:hover td { background: rgba(255,255,255,0.015); }
 }
 .form-group input:focus, .form-group select:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+  box-shadow: 0 0 0 3px rgba(14,165,233,0.16);
 }
 .form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 28px; }
 
@@ -239,7 +242,48 @@ tr:hover td { background: rgba(255,255,255,0.015); }
   cursor: pointer; padding: 2px 6px; font-size: 14px;
   border-radius: 4px;
 }
-.copy-btn:hover { color: var(--accent2); background: rgba(255,255,255,0.05); }
+.copy-btn:hover { color: var(--accent2); background: rgba(14,165,233,0.12); }
+
+.twofa-panel {
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(14,165,233,0.28);
+  background: #f0fbff;
+}
+.twofa-secret {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  margin-top: 10px;
+  color: #0c4a6e;
+  word-break: break-all;
+}
+.twofa-uri {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  margin-top: 10px;
+  color: #0369a1;
+  word-break: break-all;
+}
+.twofa-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+.twofa-input {
+  background: #fff;
+  border: 1px solid #7dd3fc;
+  border-radius: 8px;
+  padding: 8px 10px;
+  width: 130px;
+  color: var(--text);
+  outline: none;
+}
+.twofa-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(14,165,233,0.14);
+}
 
 /* Quick add buttons */
 .quick-add { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
@@ -309,6 +353,31 @@ tr:hover td { background: rgba(255,255,255,0.015); }
           <span class="label">SSO Login URL</span>
           <span class="value" id="dash-sso"></span>
           <button class="copy-btn" onclick="copyText(document.getElementById('dash-sso').textContent)" title="Copy">📋</button>
+        </div>
+      </div>
+      <div class="config-block">
+        <h3>Admin Security</h3>
+        <div class="config-row">
+          <span class="label">2FA (Authenticator App)</span>
+          <span class="value" id="admin-2fa-status">Loading...</span>
+        </div>
+        <div class="twofa-actions">
+          <button class="btn btn-primary btn-sm" id="btn-2fa-setup" onclick="startAdmin2FASetup()">Enable 2FA</button>
+          <button class="btn btn-danger btn-sm" id="btn-2fa-disable" onclick="disableAdmin2FA()" style="display:none">Disable 2FA</button>
+        </div>
+        <div class="twofa-panel" id="twofa-setup-panel" style="display:none">
+          <div style="font-size:13px;color:var(--text2);line-height:1.6">
+            1. Add this secret to Google Authenticator / Microsoft Authenticator.<br>
+            2. Enter a 6-digit code below to confirm and enable.
+          </div>
+          <div class="twofa-secret" id="twofa-secret"></div>
+          <div class="twofa-uri" id="twofa-uri"></div>
+          <div class="twofa-actions">
+            <input class="twofa-input" type="text" id="twofa-code" placeholder="123456" maxlength="6" inputmode="numeric" autocomplete="one-time-code">
+            <button class="btn btn-green btn-sm" id="btn-2fa-enable" onclick="confirmAdmin2FA()">Verify & Enable</button>
+            <button class="btn btn-ghost btn-sm" onclick="copyText(document.getElementById('twofa-secret').textContent)">Copy Secret</button>
+            <button class="btn btn-ghost btn-sm" onclick="copyText(document.getElementById('twofa-uri').textContent)">Copy OTP URI</button>
+          </div>
         </div>
       </div>
     </div>
@@ -505,6 +574,77 @@ async function loadDashboard() {
     document.getElementById('dash-metadata').textContent = cert.metadataUrl;
     document.getElementById('dash-sso').textContent = cert.ssoUrl;
   }
+  await loadAdmin2FAStatus();
+}
+
+function resetTwoFASetupPanel() {
+  document.getElementById('twofa-setup-panel').style.display = 'none';
+  document.getElementById('twofa-secret').textContent = '';
+  document.getElementById('twofa-uri').textContent = '';
+  document.getElementById('twofa-code').value = '';
+}
+
+async function loadAdmin2FAStatus() {
+  const res = await api('/api/admin/2fa');
+  if (res.error) {
+    document.getElementById('admin-2fa-status').textContent = 'Unknown';
+    document.getElementById('btn-2fa-setup').style.display = 'inline-flex';
+    document.getElementById('btn-2fa-disable').style.display = 'none';
+    resetTwoFASetupPanel();
+    return;
+  }
+
+  const enabled = !!res.enabled;
+  const statusEl = document.getElementById('admin-2fa-status');
+  statusEl.textContent = enabled ? 'Enabled' : 'Disabled';
+  statusEl.style.color = enabled ? 'var(--green)' : 'var(--amber)';
+
+  document.getElementById('btn-2fa-setup').style.display = enabled ? 'none' : 'inline-flex';
+  document.getElementById('btn-2fa-disable').style.display = enabled ? 'inline-flex' : 'none';
+
+  if (!res.hasPendingSetup || enabled) {
+    resetTwoFASetupPanel();
+  }
+}
+
+async function startAdmin2FASetup() {
+  const res = await api('/api/admin/2fa/setup', { method: 'POST', body: {} });
+  if (res.error) return alert(res.error);
+
+  document.getElementById('twofa-secret').textContent = res.secret;
+  document.getElementById('twofa-uri').textContent = res.otpauthUrl;
+  document.getElementById('twofa-code').value = '';
+  document.getElementById('twofa-setup-panel').style.display = 'block';
+}
+
+async function confirmAdmin2FA() {
+  const token = document.getElementById('twofa-code').value.trim();
+  if (!token) return alert('Enter the 6-digit code first');
+
+  const res = await api('/api/admin/2fa/enable', {
+    method: 'POST',
+    body: { token }
+  });
+
+  if (res.error) return alert(res.error);
+  alert('2FA enabled successfully');
+  resetTwoFASetupPanel();
+  loadAdmin2FAStatus();
+}
+
+async function disableAdmin2FA() {
+  const token = prompt('Enter current 2FA code to disable:');
+  if (!token) return;
+
+  const res = await api('/api/admin/2fa/disable', {
+    method: 'POST',
+    body: { token }
+  });
+
+  if (res.error) return alert(res.error);
+  alert('2FA disabled');
+  resetTwoFASetupPanel();
+  loadAdmin2FAStatus();
 }
 
 // Users
