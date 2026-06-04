@@ -624,10 +624,24 @@ app.get('/api/cert-info', requireAdmin, (req, res) => {
 
 // Admin password change
 app.post('/api/admin/password', requireAdmin, (req, res) => {
-  const { newPassword } = req.body;
-  if (!newPassword || newPassword.length < 6) {
-    return res.status(400).json({ error: 'Password must be at least 6 characters' });
+  const currentPassword = String(req.body.currentPassword || '');
+  const newPassword = String(req.body.newPassword || '');
+
+  if (!currentPassword) {
+    return res.status(400).json({ error: 'Current password is required' });
   }
+  if (!newPassword || newPassword.length < 8) {
+    return res.status(400).json({ error: 'New password must be at least 8 characters' });
+  }
+  if (currentPassword === newPassword) {
+    return res.status(400).json({ error: 'New password must be different from current password' });
+  }
+
+  const admin = adminOps.verify(req.session.admin.username, currentPassword);
+  if (!admin) {
+    return res.status(400).json({ error: 'Current password is incorrect' });
+  }
+
   adminOps.changePassword(req.session.admin.id, newPassword);
   res.json({ success: true });
 });

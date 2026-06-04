@@ -271,6 +271,17 @@ tr:hover td { background: rgba(148,163,184,0.14); }
   flex-wrap: wrap;
   margin-top: 12px;
 }
+.security-panel {
+  margin-top: 12px;
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(14,165,233,0.2);
+  background: #f8fdff;
+}
+.security-title {
+  font-size: 13px;
+  color: var(--text2);
+}
 .twofa-input {
   background: #fff;
   border: 1px solid #7dd3fc;
@@ -281,6 +292,19 @@ tr:hover td { background: rgba(148,163,184,0.14); }
   outline: none;
 }
 .twofa-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(14,165,233,0.14);
+}
+.security-input {
+  background: #fff;
+  border: 1px solid #7dd3fc;
+  border-radius: 8px;
+  padding: 8px 10px;
+  width: 210px;
+  color: var(--text);
+  outline: none;
+}
+.security-input:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px rgba(14,165,233,0.14);
 }
@@ -357,6 +381,14 @@ tr:hover td { background: rgba(148,163,184,0.14); }
       </div>
       <div class="config-block">
         <h3>Admin Security</h3>
+        <div class="security-panel">
+          <div class="security-title">Change admin password</div>
+          <div class="twofa-actions">
+            <input class="security-input" type="password" id="admin-current-password" placeholder="Current password" autocomplete="current-password">
+            <input class="security-input" type="password" id="admin-new-password" placeholder="New password (min 8 chars)" autocomplete="new-password">
+            <button class="btn btn-primary btn-sm" onclick="changeAdminPassword()">Update Password</button>
+          </div>
+        </div>
         <div class="config-row">
           <span class="label">2FA (Authenticator App)</span>
           <span class="value" id="admin-2fa-status">Loading...</span>
@@ -645,6 +677,24 @@ async function disableAdmin2FA() {
   alert('2FA disabled');
   resetTwoFASetupPanel();
   loadAdmin2FAStatus();
+}
+
+async function changeAdminPassword() {
+  const currentPassword = document.getElementById('admin-current-password').value;
+  const newPassword = document.getElementById('admin-new-password').value;
+  if (!currentPassword || !newPassword) {
+    return alert('Please enter current and new password');
+  }
+
+  const res = await api('/api/admin/password', {
+    method: 'POST',
+    body: { currentPassword, newPassword }
+  });
+
+  if (res.error) return alert(res.error);
+  document.getElementById('admin-current-password').value = '';
+  document.getElementById('admin-new-password').value = '';
+  alert('Password updated successfully');
 }
 
 // Users
