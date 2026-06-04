@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mini-IdP</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Manrope:wght@400;500;600&display=swap');
+
+  :root {
+    --bg: #05070d;
+    --panel: rgba(14, 17, 27, 0.86);
+    --line: rgba(255, 255, 255, 0.1);
+    --text: #f4f7ff;
+    --text-muted: #9fa9c5;
+    --teal: #10b981;
+    --blue: #38bdf8;
+    --orange: #f59e0b;
+    --radius: 16px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Manrope', sans-serif;
+    color: var(--text);
+    background:
+      radial-gradient(1200px 600px at 10% -20%, rgba(56, 189, 248, 0.18), transparent 55%),
+      radial-gradient(900px 500px at 95% 0%, rgba(16, 185, 129, 0.18), transparent 55%),
+      var(--bg);
+    min-height: 100vh;
+    padding: 42px 24px 56px;
+  }
+
+  .container {
+    max-width: 1120px;
+    margin: 0 auto;
+  }
+
+  .hero {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 22px;
+    margin-bottom: 20px;
+  }
+
+  .hero-main, .hero-side, .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    backdrop-filter: blur(12px);
+  }
+
+  .hero-main {
+    padding: 34px;
+  }
+
+  .tag {
+    display: inline-block;
+    background: rgba(56, 189, 248, 0.16);
+    color: #8ed7f7;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    border-radius: 999px;
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 5px 10px;
+    margin-bottom: 18px;
+  }
+
+  h1, h2, h3 {
+    font-family: 'Space Grotesk', sans-serif;
+  }
+
+  h1 {
+    font-size: clamp(30px, 4vw, 44px);
+    line-height: 1.06;
+    margin-bottom: 14px;
+  }
+
+  .subtitle {
+    color: var(--text-muted);
+    font-size: 16px;
+    line-height: 1.7;
+    max-width: 58ch;
+    margin-bottom: 24px;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 11px 16px;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+  }
+
+  .btn:hover { transform: translateY(-1px); }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: #052e25;
+  }
+
+  .btn-ghost {
+    border: 1px solid var(--line);
+    color: var(--text);
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  .hero-side {
+    padding: 26px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .hero-side h3 {
+    font-size: 18px;
+    margin-bottom: 4px;
+  }
+
+  .step {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 14px;
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  .step small {
+    color: #95a0bc;
+    display: block;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 11px;
+  }
+
+  .step p {
+    color: #d9e2f8;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+
+  .panel {
+    padding: 20px;
+  }
+
+  .panel h2 {
+    font-size: 20px;
+    margin-bottom: 10px;
+  }
+
+  .panel p {
+    color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1.7;
+  }
+
+  .stat {
+    margin-top: 12px;
+    font-size: 13px;
+    color: #c8d1eb;
+    line-height: 1.6;
+  }
+
+  .endpoint {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px;
+    margin-top: 10px;
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  .endpoint .name {
+    font-size: 11px;
+    color: #95a0bc;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .endpoint code {
+    font-size: 12px;
+    color: #8ed7f7;
+    word-break: break-all;
+  }
+
+  .notice {
+    font-size: 12px;
+    color: #8b97b5;
+    margin-top: 10px;
+  }
+
+  .panel-accent {
+    border-color: rgba(245, 158, 11, 0.3);
+    background:
+      radial-gradient(500px 220px at 120% -30%, rgba(245, 158, 11, 0.15), transparent 55%),
+      var(--panel);
+  }
+
+  .panel-blue {
+    border-color: rgba(56, 189, 248, 0.3);
+  }
+
+  .panel-green {
+    border-color: rgba(16, 185, 129, 0.35);
+  }
+
+  @media (max-width: 980px) {
+    .hero { grid-template-columns: 1fr; }
+    .grid { grid-template-columns: 1fr; }
+    body { padding: 26px 16px 36px; }
+    .hero-main, .hero-side, .panel { padding: 20px; }
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <section class="hero">
+      <div class="hero-main">
+        <span class="tag">SAML Identity Provider</span>
+        <h1>Mini-IdP for Google Workspace and Microsoft 365</h1>
+        <p class="subtitle">
+          A lightweight SAML IdP with user management, SP templates, login logs, and certificate export.
+          Use this page as your entry point for setup and operations.
+        </p>
+        <div class="actions">
+          <a class="btn btn-primary" href="/admin/login">Open Admin Console</a>
+          <a class="btn btn-ghost" href="/saml/metadata" target="_blank" rel="noopener noreferrer">View Metadata XML</a>
+          <a class="btn btn-ghost" href="/saml/certificate" target="_blank" rel="noopener noreferrer">Download Certificate</a>
+        </div>
+        <p class="notice">Tip: once login failures exceed threshold, captcha verification is enforced automatically.</p>
+      </div>
+
+      <aside class="hero-side">
+        <h3>Quick Start</h3>
+        <div class="step">
+          <small>Step 1</small>
+          <p>Log in to the admin console and add users who can sign in through SAML.</p>
+        </div>
+        <div class="step">
+          <small>Step 2</small>
+          <p>Add a Service Provider using templates for Google or Microsoft, or configure custom SP values.</p>
+        </div>
+        <div class="step">
+          <small>Step 3</small>
+          <p>Provide metadata URL and certificate to your SP, then test SSO from the target service.</p>
+        </div>
+      </aside>
+    </section>
+
+    <section class="grid">
+      <article class="panel panel-blue">
+        <h2>Authentication Paths</h2>
+        <p>Use the endpoints below when integrating SAML service providers.</p>
+        <div class="endpoint">
+          <div class="name">SSO Endpoint</div>
+          <code id="sso-url"></code>
+        </div>
+        <div class="endpoint">
+          <div class="name">SLO Endpoint</div>
+          <code id="slo-url"></code>
+        </div>
+      </article>
+
+      <article class="panel panel-green">
+        <h2>Metadata and Cert</h2>
+        <p>Share metadata and upload signing certificate in Google Admin or Microsoft Entra setup.</p>
+        <div class="endpoint">
+          <div class="name">Metadata URL</div>
+          <code id="meta-url"></code>
+        </div>
+        <div class="endpoint">
+          <div class="name">Certificate</div>
+          <code id="cert-url"></code>
+        </div>
+      </article>
+
+      <article class="panel panel-accent">
+        <h2>Operational Notes</h2>
+        <p>Login attempts are monitored for brute-force mitigation. Failed attempts trigger captcha and temporary lockouts.</p>
+        <div class="stat">
+          - Captcha threshold: 3 failed attempts<br>
+          - Temporary lock: after repeated failures<br>
+          - Full logs available in Admin > Login Logs
+        </div>
+      </article>
+    </section>
+  </div>
+
+  <script>
+    const origin = window.location.origin;
+    document.getElementById('sso-url').textContent = `${origin}/saml/sso`;
+    document.getElementById('slo-url').textContent = `${origin}/saml/slo`;
+    document.getElementById('meta-url').textContent = `${origin}/saml/metadata`;
+    document.getElementById('cert-url').textContent = `${origin}/saml/certificate`;
+  </script>
+</body>
+</html>

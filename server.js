@@ -21,8 +21,14 @@ if (fs.existsSync(envPath)) {
 const HOSTNAME = process.env.HOSTNAME || 'localhost';
 const PORT = parseInt(process.env.PORT || '8080');
 const SESSION_SECRET = process.env.SESSION_SECRET || 'change-me-please';
+const LOGIN_CAPTCHA_THRESHOLD = parseInt(process.env.LOGIN_CAPTCHA_THRESHOLD || '3', 10);
+const LOGIN_LOCK_THRESHOLD = parseInt(process.env.LOGIN_LOCK_THRESHOLD || '10', 10);
+const LOGIN_LOCK_MS = parseInt(process.env.LOGIN_LOCK_MS || String(15 * 60 * 1000), 10);
+const LOGIN_ATTEMPT_TTL_MS = parseInt(process.env.LOGIN_ATTEMPT_TTL_MS || String(24 * 60 * 60 * 1000), 10);
+const CAPTCHA_TTL_MS = parseInt(process.env.CAPTCHA_TTL_MS || String(5 * 60 * 1000), 10);
 
 const app = express();
+const loginAttemptStore = new Map();
 
 app.use(morgan('short'));
 app.use(express.urlencoded({ extended: true, limit: '5mb' }));
@@ -35,6 +41,142 @@ app.use(session({
 }));
 app.use('/public', express.static(path.join(__dirname, 'public')));
 
+function getClientIp(req) {
+  const forwarded = req.headers['x-forwarded-for'];
+  if (typeof forwarded === 'string' && forwarded.length > 0) {
+    return forwarded.split(',')[0].trim();
+  }
+  return req.ip || req.socket?.remoteAddress || 'unknown';
+}
+
+function buildLoginAttemptKey(scope, req, identifier) {
+  const normalizedIdentifier = String(identifier || 'unknown').trim().toLowerCase() || 'unknown';
+  return `${scope}:${getClientIp(req)}:${normalizedIdentifier}`;
+}
+
+function readAttemptRecord(key) {
+  const now = Date.now();
+  const record = loginAttemptStore.get(key);
+  if (!record) return { failedCount: 0, lockUntil: 0, updatedAt: now };
+
+  if (record.lockUntil > 0 && record.lockUntil <= now) {
+    const unlockedState = { failedCount: LOGIN_CAPTCHA_THRESHOLD, lockUntil: 0, updatedAt: now };
+    loginAttemptStore.set(key, unlockedState);
+    return unlockedState;
+  }
+
+  if (now - record.updatedAt > LOGIN_ATTEMPT_TTL_MS && record.lockUntil <= now) {
+    loginAttemptStore.delete(key);
+    return { failedCount: 0, lockUntil: 0, updatedAt: now };
+  }
+  return record;
+}
+
+function registerFailedAttempt(key) {
+  const now = Date.now();
+  const prev = readAttemptRecord(key);
+  const failedCount = (prev.failedCount || 0) + 1;
+  const lockUntil = failedCount >= LOGIN_LOCK_THRESHOLD ? now + LOGIN_LOCK_MS : prev.lockUntil || 0;
+  const next = { failedCount, lockUntil, updatedAt: now };
+  loginAttemptStore.set(key, next);
+  return next;
+}
+
+function clearAttemptRecord(key) {
+  loginAttemptStore.delete(key);
+}
+
+function isCaptchaRequired(key) {
+  return readAttemptRecord(key).failedCount >= LOGIN_CAPTCHA_THRESHOLD;
+}
+
+function getLockRemainingMs(key) {
+  const ms = readAttemptRecord(key).lockUntil - Date.now();
+  return ms > 0 ? ms : 0;
+}
+
+function cleanupAttemptStore() {
+  const now = Date.now();
+  for (const [key, value] of loginAttemptStore.entries()) {
+    if (now - value.updatedAt > LOGIN_ATTEMPT_TTL_MS && value.lockUntil <= now) {
+      loginAttemptStore.delete(key);
+    }
+  }
+}
+
+setInterval(cleanupAttemptStore, 30 * 60 * 1000).unref();
+
+function randomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function generateCaptcha() {
+  const a = randomInt(2, 12);
+  const b = randomInt(2, 12);
+  if (Math.random() > 0.5) {
+    return { question: `${a} + ${b} = ?`, answer: String(a + b) };
+  }
+  const high = Math.max(a, b);
+  const low = Math.min(a, b);
+  return { question: `${high} - ${low} = ?`, answer: String(high - low) };
+}
+
+function getCaptchaBucket(req) {
+  if (!req.session.captcha) req.session.captcha = {};
+  return req.session.captcha;
+}
+
+function issueCaptchaChallenge(req, scope) {
+  const bucket = getCaptchaBucket(req);
+  const captcha = generateCaptcha();
+  bucket[scope] = {
+    question: captcha.question,
+    answer: captcha.answer,
+    expiresAt: Date.now() + CAPTCHA_TTL_MS
+  };
+  return bucket[scope];
+}
+
+function getCaptchaChallenge(req, scope) {
+  const bucket = getCaptchaBucket(req);
+  const existing = bucket[scope];
+  if (!existing || existing.expiresAt < Date.now()) {
+    return issueCaptchaChallenge(req, scope);
+  }
+  return existing;
+}
+
+function clearCaptchaChallenge(req, scope) {
+  if (req.session.captcha) delete req.session.captcha[scope];
+}
+
+function verifyCaptchaAnswer(req, scope, answer) {
+  const bucket = getCaptchaBucket(req);
+  const challenge = bucket[scope];
+  if (!challenge || challenge.expiresAt < Date.now()) {
+    issueCaptchaChallenge(req, scope);
+    return false;
+  }
+
+  const valid = String(answer || '').trim() === String(challenge.answer);
+  if (valid) {
+    delete bucket[scope];
+    return true;
+  }
+
+  issueCaptchaChallenge(req, scope);
+  return false;
+}
+
+function redirectWithAuthError(res, pathName, { error, captcha, retryMs } = {}) {
+  const params = new URLSearchParams();
+  if (error) params.set('error', error);
+  if (captcha) params.set('captcha', '1');
+  if (retryMs && retryMs > 0) params.set('retry', String(Math.ceil(retryMs / 1000)));
+  const query = params.toString();
+  res.redirect(query ? `${pathName}?${query}` : pathName);
+}
+
 // ============================================================
 // Middleware
 // ============================================================
@@ -45,6 +187,20 @@ function requireAdmin(req, res, next) {
   }
   res.redirect('/admin/login');
 }
+
+app.get('/auth/captcha', (req, res) => {
+  const scope = String(req.query.scope || '');
+  if (!['sso', 'admin'].includes(scope)) {
+    return res.status(400).json({ error: 'Invalid captcha scope' });
+  }
+
+  const challenge = getCaptchaChallenge(req, scope);
+  res.set('Cache-Control', 'no-store');
+  res.json({
+    question: challenge.question,
+    expiresInSeconds: Math.max(0, Math.ceil((challenge.expiresAt - Date.now()) / 1000))
+  });
+});
 
 // ============================================================
 // SAML Endpoints
@@ -122,13 +278,44 @@ app.get('/sso/login', (req, res) => {
 
 // SSO Login submit
 app.post('/sso/login', (req, res) => {
-  const { email, password } = req.body;
+  const email = String(req.body.email || '').trim();
+  const password = String(req.body.password || '');
+  const captchaAnswer = req.body.captcha_answer;
+  const attemptKey = buildLoginAttemptKey('sso', req, email);
+  const lockRemainingMs = getLockRemainingMs(attemptKey);
+
+  if (lockRemainingMs > 0) {
+    return redirectWithAuthError(res, '/sso/login', {
+      error: 'locked',
+      captcha: true,
+      retryMs: lockRemainingMs
+    });
+  }
+
+  if (isCaptchaRequired(attemptKey) && !verifyCaptchaAnswer(req, 'sso', captchaAnswer)) {
+    const state = registerFailedAttempt(attemptKey);
+    const retryMs = Math.max(0, state.lockUntil - Date.now());
+    return redirectWithAuthError(res, '/sso/login', {
+      error: retryMs > 0 ? 'locked' : 'captcha',
+      captcha: true,
+      retryMs
+    });
+  }
 
   const user = userOps.verify(email, password);
   if (!user) {
-    logOps.add(email, req.session.saml?.issuer || 'unknown', false, req.ip);
-    return res.redirect('/sso/login?error=invalid');
+    logOps.add(email || 'unknown', req.session.saml?.issuer || 'unknown', false, getClientIp(req));
+    const state = registerFailedAttempt(attemptKey);
+    const retryMs = Math.max(0, state.lockUntil - Date.now());
+    return redirectWithAuthError(res, '/sso/login', {
+      error: retryMs > 0 ? 'locked' : 'invalid',
+      captcha: state.failedCount >= LOGIN_CAPTCHA_THRESHOLD,
+      retryMs
+    });
   }
+
+  clearAttemptRecord(attemptKey);
+  clearCaptchaChallenge(req, 'sso');
 
   req.session.ssoUser = {
     email: user.email,
@@ -218,11 +405,43 @@ app.get('/admin/login', (req, res) => {
 });
 
 app.post('/admin/login', (req, res) => {
-  const { username, password } = req.body;
+  const username = String(req.body.username || '').trim();
+  const password = String(req.body.password || '');
+  const captchaAnswer = req.body.captcha_answer;
+  const attemptKey = buildLoginAttemptKey('admin', req, username);
+  const lockRemainingMs = getLockRemainingMs(attemptKey);
+
+  if (lockRemainingMs > 0) {
+    return redirectWithAuthError(res, '/admin/login', {
+      error: 'locked',
+      captcha: true,
+      retryMs: lockRemainingMs
+    });
+  }
+
+  if (isCaptchaRequired(attemptKey) && !verifyCaptchaAnswer(req, 'admin', captchaAnswer)) {
+    const state = registerFailedAttempt(attemptKey);
+    const retryMs = Math.max(0, state.lockUntil - Date.now());
+    return redirectWithAuthError(res, '/admin/login', {
+      error: retryMs > 0 ? 'locked' : 'captcha',
+      captcha: true,
+      retryMs
+    });
+  }
+
   const admin = adminOps.verify(username, password);
   if (!admin) {
-    return res.redirect('/admin/login?error=1');
+    const state = registerFailedAttempt(attemptKey);
+    const retryMs = Math.max(0, state.lockUntil - Date.now());
+    return redirectWithAuthError(res, '/admin/login', {
+      error: retryMs > 0 ? 'locked' : 'invalid',
+      captcha: state.failedCount >= LOGIN_CAPTCHA_THRESHOLD,
+      retryMs
+    });
   }
+
+  clearAttemptRecord(attemptKey);
+  clearCaptchaChallenge(req, 'admin');
   req.session.admin = { id: admin.id, username: admin.username };
   res.redirect('/admin');
 });
@@ -374,10 +593,10 @@ app.post('/api/admin/password', requireAdmin, (req, res) => {
 });
 
 // ============================================================
-// Root redirect
+// Root landing page
 // ============================================================
 app.get('/', (req, res) => {
-  res.redirect('/admin');
+  res.sendFile(path.join(__dirname, 'views', 'home.html'));
 });
 
 // ============================================================

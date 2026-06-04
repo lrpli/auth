@@ -61,7 +61,7 @@
     margin-bottom: 6px;
     letter-spacing: 0.02em;
   }
-  input[type="email"], input[type="password"] {
+  input[type="email"], input[type="password"], input[type="text"] {
     width: 100%;
     background: rgba(255,255,255,0.04);
     border: 1px solid rgba(255,255,255,0.08);
@@ -79,7 +79,7 @@
     box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
   }
   input::placeholder { color: #52525b; }
-  button {
+  .submit-btn {
     width: 100%;
     padding: 13px;
     background: linear-gradient(135deg, #6366f1, #4f46e5);
@@ -93,11 +93,11 @@
     transition: transform 0.15s, box-shadow 0.15s;
     margin-top: 4px;
   }
-  button:hover {
+  .submit-btn:hover {
     transform: translateY(-1px);
     box-shadow: 0 6px 24px rgba(99,102,241,0.35);
   }
-  button:active { transform: translateY(0); }
+  .submit-btn:active { transform: translateY(0); }
   .error {
     background: rgba(239,68,68,0.1);
     border: 1px solid rgba(239,68,68,0.2);
@@ -106,6 +106,46 @@
     border-radius: 10px;
     font-size: 13px;
     margin-bottom: 20px;
+  }
+  .captcha-block {
+    display: none;
+    margin-bottom: 20px;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(99,102,241,0.25);
+    background: rgba(99,102,241,0.08);
+  }
+  .captcha-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .captcha-question {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    color: #c7d2fe;
+    letter-spacing: 0.04em;
+    font-size: 14px;
+    flex: 1;
+  }
+  .captcha-refresh {
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 8px;
+    background: rgba(255,255,255,0.02);
+    color: #d4d4d8;
+    font-size: 13px;
+    padding: 6px 10px;
+    cursor: pointer;
+  }
+  .captcha-refresh:hover {
+    border-color: rgba(99,102,241,0.5);
+    color: #e4e4e7;
+  }
+  .captcha-tip {
+    margin-top: -12px;
+    margin-bottom: 10px;
+    color: #a1a1aa;
+    font-size: 12px;
   }
   .footer {
     text-align: center;
@@ -130,17 +170,68 @@
       <label for="password">Password</label>
       <input type="password" id="password" name="password" placeholder="••••••••" required>
 
-      <button type="submit">Sign in</button>
+      <div class="captcha-block" id="captcha-block">
+        <label for="captcha_answer">Verification</label>
+        <div class="captcha-row">
+          <div class="captcha-question" id="captcha-question">Loading...</div>
+          <button type="button" class="captcha-refresh" id="captcha-refresh">Refresh</button>
+        </div>
+        <input type="text" id="captcha_answer" name="captcha_answer" placeholder="Enter result" autocomplete="off">
+      </div>
+      <p class="captcha-tip" id="captcha-tip" style="display:none">Multiple failed attempts detected. Verification is required.</p>
+
+      <button class="submit-btn" type="submit">Sign in</button>
     </form>
 
     <div class="footer">Secured by Mini-IdP</div>
   </div>
 
   <script>
-    if (location.search.includes('error=invalid')) {
-      const el = document.getElementById('error');
-      el.textContent = 'Invalid email or password. Please try again.';
-      el.style.display = 'block';
+    const params = new URLSearchParams(location.search);
+    const error = params.get('error');
+    const retry = parseInt(params.get('retry') || '0', 10);
+    const errorEl = document.getElementById('error');
+    const captchaBlock = document.getElementById('captcha-block');
+    const captchaTip = document.getElementById('captcha-tip');
+    const captchaInput = document.getElementById('captcha_answer');
+    const captchaQuestion = document.getElementById('captcha-question');
+    const captchaRefresh = document.getElementById('captcha-refresh');
+
+    if (error === 'invalid') {
+      errorEl.textContent = 'Invalid email or password. Please try again.';
+      errorEl.style.display = 'block';
+    } else if (error === 'captcha') {
+      errorEl.textContent = 'Verification failed. Please try again.';
+      errorEl.style.display = 'block';
+    } else if (error === 'locked') {
+      errorEl.textContent = `Too many failed attempts. Try again in ${retry || 60} seconds.`;
+      errorEl.style.display = 'block';
+    }
+
+    async function loadCaptcha() {
+      try {
+        const res = await fetch('/auth/captcha?scope=sso', { credentials: 'same-origin' });
+        if (!res.ok) throw new Error('captcha request failed');
+        const data = await res.json();
+        captchaQuestion.textContent = data.question || 'Retry verification';
+      } catch (_) {
+        captchaQuestion.textContent = 'Unable to load verification. Refresh page.';
+      }
+    }
+
+    function enableCaptcha() {
+      captchaBlock.style.display = 'block';
+      captchaTip.style.display = 'block';
+      captchaInput.required = true;
+      loadCaptcha();
+    }
+
+    captchaRefresh.addEventListener('click', () => {
+      loadCaptcha();
+    });
+
+    if (params.get('captcha') === '1' || error === 'captcha' || error === 'locked') {
+      enableCaptcha();
     }
   </script>
 </body>
